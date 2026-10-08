@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A tiny personal microblog.">
+  <meta name="theme-color" content="#0d0f12">
+  <title>microblog</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="#top" aria-label="Home">
+        <span class="brand-mark">✳</span>
+        <span>microblog</span>
+      </a>
+      <nav class="nav">
+        <a href="#top" class="nav-item active"><span>⌂</span> Home</a>
+        <button id="openComposer" class="nav-item nav-button owner-only" hidden><span>＋</span> Write</button>
+      </nav>
+      <div class="sidebar-card">
+        <p class="eyebrow">YOUR SPACE</p>
+        <p class="sidebar-copy">A small place for small thoughts.</p>
+      </div>
+      <div class="sidebar-bottom">
+        <button id="openAuth" class="account-pill">Sign in</button>
+        <button id="signOut" class="account-pill muted" hidden>Sign out</button>
+      </div>
+    </aside>
+
+    <main class="main" id="top">
+      <header class="mobile-header">
+        <a class="brand" href="#top"><span class="brand-mark">✳</span><span>microblog</span></a>
+        <button id="mobileCompose" class="icon-button owner-only" hidden aria-label="Write">＋</button>
+      </header>
+
+      <section class="hero">
+        <div>
+          <p class="eyebrow">PERSONAL MICROBLOG</p>
+          <h1>little thoughts,<br><em>published.</em></h1>
+          <p class="hero-copy">A lightweight feed for short notes, ideas, links, and whatever is currently occupying your brain.</p>
+        </div>
+        <button id="heroCompose" class="primary-button owner-only" hidden>Write something <span>↗</span></button>
+      </section>
+
+      <div class="feed-header">
+        <span>Latest</span>
+        <button id="refreshFeed" class="text-button" title="Refresh">Refresh ↻</button>
+      </div>
+
+      <section id="feed" class="feed" aria-live="polite">
+        <div class="loading-card"><div class="spinner"></div><span>Loading the feed…</span></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="composerModal" class="modal" hidden>
+    <div class="modal-backdrop" data-close="composer"></div>
+    <section class="modal-card composer-card" role="dialog" aria-modal="true" aria-labelledby="composerTitle">
+      <div class="modal-head">
+        <div><p class="eyebrow">NEW POST</p><h2 id="composerTitle">What’s on your mind?</h2></div>
+        <button class="close-button" data-close="composer" aria-label="Close">×</button>
+      </div>
+      <textarea id="postBody" maxlength="500" placeholder="Write something small…" autofocus></textarea>
+      <div class="composer-footer">
+        <span id="charCount">0 / 500</span>
+        <button id="publishPost" class="primary-button">Publish <span>↗</span></button>
+      </div>
+      <p id="composerError" class="form-error"></p>
+    </section>
+  </div>
+
+  <div id="authModal" class="modal" hidden>
+    <div class="modal-backdrop" data-close="auth"></div>
+    <section class="modal-card auth-card" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+      <div class="modal-head">
+        <div><p class="eyebrow">ACCOUNT</p><h2 id="authTitle">Sign in to join the conversation.</h2></div>
+        <button class="close-button" data-close="auth" aria-label="Close">×</button>
+      </div>
+      <div class="auth-tabs">
+        <button id="loginTab" class="auth-tab active">Sign in</button>
+        <button id="signupTab" class="auth-tab">Create account</button>
+      </div>
+      <form id="authForm">
+        <label>Email<input id="authEmail" type="email" autocomplete="email" required></label>
+        <label>Password<input id="authPassword" type="password" autocomplete="current-password" minlength="8" required></label>
+        <label id="displayNameField" hidden>Display name<input id="displayName" type="text" maxlength="32" autocomplete="nickname"></label>
+        <button id="authSubmit" class="primary-button wide" type="submit">Sign in</button>
+      </form>
+      <p id="authMessage" class="form-message"></p>
+    </section>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="app.js" type="module"></script>
+</body>
+</html>
