@@ -9,6 +9,33 @@ const supabase = hasConfig
 
 const MAX_POST_LENGTH = 20000;
 
+// A stable, random identifier for this browser. This enables best-effort
+// one-like-per-browser behavior without requiring visitors to sign in.
+function makeDeviceId() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, char => {
+    const random = Math.random() * 16 | 0;
+    return (char === 'x' ? random : (random & 0x3 | 0x8)).toString(16);
+  });
+}
+
+function getDeviceId() {
+  const key = 'in-the-margins-device-id';
+  try {
+    let id = localStorage.getItem(key);
+    if (!id) {
+      id = makeDeviceId();
+      localStorage.setItem(key, id);
+    }
+    return id;
+  } catch (_) {
+    // If storage is blocked, likes still work for this page session.
+    return makeDeviceId();
+  }
+}
+
+const deviceId = getDeviceId();
+
 const state = {
   user: null,
   profile: null,
@@ -186,7 +213,7 @@ function renderAuthUI() {
   setHidden('.owner-only', !state.isOwner);
   $('openAuth').hidden = signedIn;
   $('signOut').hidden = !signedIn;
-  $('openAuth').textContent = signedIn ? state.profile?.display_name || state.user.email : 'Sign in';
+  $('openAuth').textContent = signedIn ? state.profile?.display_name || state.user.email : 'Owner sign in';
 }
 
 function renderFeed() {
@@ -219,7 +246,7 @@ function renderFeed() {
         </div>
         <div class="post-body">${renderMarkdown(post.body)}</div>
         <div class="post-actions">
-          <button class="action-button like-button ${liked ? 'liked' : ''}" data-like-post="${post.id}" aria-pressed="${liked}" aria-label="${liked ? 'Unlike' : 'Like'} this note" title="${state.likesReady ? (state.user ? (liked ? 'Remove your like' : 'Like this note') : 'Sign in to like this note') : 'Likes need to be set up in Supabase'}" ${likePending || !state.likesReady ? 'disabled' : ''}>
+          <button class="action-button like-button ${liked ? 'liked' : ''}" data-like-post="${post.id}" aria-pressed="${liked}" aria-label="${liked ? 'Unlike' : 'Like'} this note" title="${state.likesReady ? (liked ? 'Remove your like from this browser' : 'Like this note from this browser') : 'Likes need to be set up in Supabase'}" ${likePending || !state.likesReady ? 'disabled' : ''}>
             <span class="like-icon" aria-hidden="true">${liked ? '♥' : '♡'}</span>
             <span class="like-label">${liked ? 'Liked' : 'Like'}</span>
             <span class="like-count">${likeCount}</span>
@@ -258,34 +285,38 @@ async function loadPosts() {
     return;
   }
 
-  const { data: likeRows, error: likesError } = await supabase
-    .from('post_likes')
-    .select('post_id,user_id')
-    .in('post_id', rows.map(post => post.id));
+  // The RPC returns counts and whether this browser (or the currently signed-in
+  // owner, for older likes) has liked each post, without exposing device IDs.
+  const { data: likeRows, error: likesError } = await supabase.rpc('get_post_like_summary', {
+    requested_post_ids: rows.map(post => post.id),
+    requested_device_id: deviceId,
+    requested_user_id: state.user?.id || null
+  });
 
   if (likesError) {
-    // Keep the public feed readable if the one-time likes table setup has not been run.
+    // Keep the public feed readable if the one-time anonymous-likes SQL has not run.
     state.likesReady = false;
-    state.posts = rows.map(post => ({ ...post, likeCount: 0, likedByMe: false }));
+    state.posts = rows.map(post => ({ ...post, likeCount: 0, likedByMe: false, likedByDevice: false, likedByUser: false }));
     renderFeed();
-    toast('Likes need a one-time setup in Supabase. See the SQL instructions.');
+    toast('Anonymous likes need a one-time setup in Supabase. See the SQL instructions.');
     console.warn('Could not load post likes:', likesError.message);
     return;
   }
 
-  const likeCounts = new Map();
-  const likedPostIds = new Set();
-  for (const like of (likeRows || [])) {
-    likeCounts.set(like.post_id, (likeCounts.get(like.post_id) || 0) + 1);
-    if (state.user && like.user_id === state.user.id) likedPostIds.add(like.post_id);
-  }
-
+  const likeSummary = new Map((likeRows || []).map(like => [like.post_id, like]));
   state.likesReady = true;
-  state.posts = rows.map(post => ({
-    ...post,
-    likeCount: likeCounts.get(post.id) || 0,
-    likedByMe: likedPostIds.has(post.id)
-  }));
+  state.posts = rows.map(post => {
+    const summary = likeSummary.get(post.id) || {};
+    const likedByDevice = Boolean(summary.liked_by_device);
+    const likedByUser = Boolean(summary.liked_by_user);
+    return {
+      ...post,
+      likeCount: Number(summary.like_count || 0),
+      likedByDevice,
+      likedByUser,
+      likedByMe: likedByDevice || likedByUser
+    };
+  });
   renderFeed();
 }
 
@@ -345,11 +376,6 @@ async function deletePost(id) {
 
 async function toggleLike(postId) {
   if (!requireClient()) return;
-  if (!state.user) {
-    toast('Sign in to like notes.');
-    openModal('authModal');
-    return;
-  }
   if (!state.likesReady || state.pendingLikes.has(postId)) return;
 
   const post = state.posts.find(item => item.id === postId);
@@ -359,13 +385,34 @@ async function toggleLike(postId) {
   state.pendingLikes.add(postId);
   renderFeed();
 
-  const result = removingLike
-    ? await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', state.user.id)
-    : await supabase.from('post_likes').insert({ post_id: postId, user_id: state.user.id });
+  let error = null;
+  if (removingLike) {
+    // Remove the device's like, and clean up an older account-based like if one exists.
+    if (post.likedByDevice) {
+      const result = await supabase.from('post_likes').delete()
+        .eq('post_id', postId)
+        .eq('device_id', deviceId);
+      error = result.error;
+    }
+    if (!error && post.likedByUser && state.user?.id) {
+      const result = await supabase.from('post_likes').delete()
+        .eq('post_id', postId)
+        .eq('user_id', state.user.id);
+      error = result.error;
+    }
+  } else {
+    // Like requests work for anonymous visitors; the unique index prevents a
+    // second row for the same browser and post.
+    const result = await supabase.from('post_likes').insert({
+      post_id: postId,
+      device_id: deviceId
+    });
+    error = result.error;
+  }
 
   state.pendingLikes.delete(postId);
-  if (result.error) {
-    toast(result.error.message);
+  if (error) {
+    toast(error.message);
     await loadPosts();
     return;
   }
@@ -377,8 +424,8 @@ function setAuthMode(mode) {
   state.authMode = mode;
   $('loginTab').classList.toggle('active', mode === 'login');
   $('signupTab').classList.toggle('active', mode === 'signup');
-  $('authTitle').textContent = mode === 'login' ? 'Sign in to join the conversation.' : 'Make yourself a little account.';
-  $('authSubmit').textContent = mode === 'login' ? 'Sign in' : 'Create account';
+  $('authTitle').textContent = mode === 'login' ? 'Owner sign-in.' : 'Create an account.';
+  $('authSubmit').textContent = mode === 'login' ? 'Sign in as owner' : 'Create account';
   $('displayNameField').hidden = mode === 'login';
   $('authMessage').textContent = '';
   $('authPassword').autocomplete = mode === 'login' ? 'current-password' : 'new-password';
