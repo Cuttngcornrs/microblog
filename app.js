@@ -7,6 +7,8 @@ const supabase = hasConfig
   ? createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
   : null;
 
+const MAX_POST_LENGTH = 20000;
+
 const state = {
   user: null,
   profile: null,
@@ -26,6 +28,117 @@ function escapeHtml(value = '') {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
+}
+
+function protectMath(source) {
+  const savedMath = [];
+  let text = String(source);
+
+  const stash = (expression, display = false) => {
+    const token = `MATHSAFEPLACEHOLDER${savedMath.length}END`;
+    savedMath.push({ token, expression });
+    return display ? `\n\n${token}\n\n` : token;
+  };
+
+  // Protect display math and the usual \(...\) / \[...\] delimiters before
+  // Markdown parsing, so underscores and asterisks inside TeX stay untouched.
+  text = text.replace(/\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)/g, match => {
+    const isDisplay = match.startsWith('$$') || match.startsWith('\\[');
+    return stash(match, isDisplay);
+  });
+
+  // Single-dollar inline math. Escaped dollar signs and $$ delimiters are excluded.
+  text = text.replace(/(?<!\\)\$(?!\$)[^\n$]+(?<!\\)\$(?!\$)/g, match => stash(match));
+  return { text, savedMath };
+}
+
+function renderMarkdown(source = '') {
+  const plainText = String(source);
+  if (!window.marked?.parse || !window.DOMPurify?.sanitize) {
+    return `<p>${escapeHtml(plainText).replace(/\r?\n/g, '<br>')}</p>`;
+  }
+
+  const protectedContent = protectMath(plainText);
+  const markdownHtml = window.marked.parse(protectedContent.text, {
+    gfm: true,
+    breaks: true
+  });
+
+  // Markdown output is user content. Sanitize it before putting it into innerHTML.
+  let safeHtml = window.DOMPurify.sanitize(markdownHtml, {
+    USE_PROFILES: { html: true }
+  });
+
+  // Restore TeX as escaped text, preserving math delimiters for MathJax.
+  for (const item of protectedContent.savedMath) {
+    safeHtml = safeHtml.replaceAll(item.token, escapeHtml(item.expression));
+  }
+  return safeHtml;
+}
+
+let mathJaxPromise = null;
+function ensureMathJax() {
+  if (window.MathJax?.typesetPromise) return Promise.resolve(window.MathJax);
+  if (mathJaxPromise) return mathJaxPromise;
+
+  mathJaxPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.id = 'mathjax-script';
+    script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js';
+    script.onload = async () => {
+      try {
+        if (window.MathJax?.startup?.promise) await window.MathJax.startup.promise;
+        resolve(window.MathJax || null);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    script.onerror = () => reject(new Error('MathJax could not be loaded.'));
+    document.head.appendChild(script);
+  }).catch(error => {
+    console.warn(error);
+    mathJaxPromise = null;
+    return null;
+  });
+
+  return mathJaxPromise;
+}
+
+function enhancePostContent() {
+  const bodies = Array.from(feed.querySelectorAll('.post-body'));
+  for (const body of bodies) {
+    if (window.hljs) {
+      body.querySelectorAll('pre code').forEach(block => {
+        try { window.hljs.highlightElement(block); } catch (error) { console.warn(error); }
+      });
+    }
+
+    body.querySelectorAll('a[href]').forEach(link => {
+      try {
+        const url = new URL(link.getAttribute('href'), window.location.href);
+        if (url.protocol === 'http:' || url.protocol === 'https:') {
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+        }
+      } catch (_) {
+        // Ignore malformed URLs; DOMPurify already filtered unsafe protocols.
+      }
+    });
+  }
+
+  if (bodies.some(body => /\\\(|\\\[|\$/.test(body.textContent || ''))) {
+    ensureMathJax().then(mathJax => {
+      if (!mathJax?.typesetPromise) return;
+      const currentBodies = Array.from(feed.querySelectorAll('.post-body'));
+      if (currentBodies.length) {
+        mathJax.typesetPromise(currentBodies).catch(error => console.warn('MathJax typesetting failed:', error));
+      }
+    });
+  }
+}
+
+function updateCharCount() {
+  $('charCount').textContent = `${$('postBody').value.length.toLocaleString()} / ${MAX_POST_LENGTH.toLocaleString()}`;
 }
 
 function initial(name = '?') {
@@ -103,6 +216,7 @@ function renderComments(post) {
 }
 
 function renderFeed() {
+  if (window.MathJax?.typesetClear) window.MathJax.typesetClear([feed]);
   if (!state.posts.length) {
     feed.innerHTML = '<div class="empty-card">Nothing here yet. The first post is waiting.</div>';
     return;
@@ -127,13 +241,14 @@ function renderFeed() {
           </div>
           ${canDelete ? `<button class="action-button danger" data-delete-post="${post.id}">Delete</button>` : ''}
         </div>
-        <div class="post-body">${escapeHtml(post.body)}</div>
+        <div class="post-body">${renderMarkdown(post.body)}</div>
         <div class="post-actions">
           <button class="action-button" data-toggle-comments="${post.id}">${expandedLabel(state.expandedComments.has(post.id), commentsCount)}</button>
         </div>
         ${renderComments(post)}
       </article>`;
   }).join('');
+  enhancePostContent();
 }
 
 function expandedLabel(expanded, count) {
@@ -199,7 +314,10 @@ async function publishPost() {
   const body = $('postBody').value.trim();
   $('composerError').textContent = '';
   if (!body) return;
-  if (body.length > 500) return;
+  if (body.length > MAX_POST_LENGTH) {
+    $('composerError').textContent = `Posts can be up to ${MAX_POST_LENGTH.toLocaleString()} characters.`;
+    return;
+  }
 
   $('publishPost').disabled = true;
   const { error } = await supabase.from('posts').insert({ author_id: state.user.id, body });
@@ -209,7 +327,7 @@ async function publishPost() {
     return;
   }
   $('postBody').value = '';
-  $('charCount').textContent = '0 / 500';
+  updateCharCount();
   closeModal('composerModal');
   toast('Published.');
   await loadPosts();
@@ -302,7 +420,7 @@ function wireEvents() {
   });
   $('refreshFeed').addEventListener('click', loadPosts);
   $('publishPost').addEventListener('click', publishPost);
-  $('postBody').addEventListener('input', () => $('charCount').textContent = `${$('postBody').value.length} / 500`);
+  $('postBody').addEventListener('input', updateCharCount);
   $('loginTab').addEventListener('click', () => setAuthMode('login'));
   $('signupTab').addEventListener('click', () => setAuthMode('signup'));
   $('authForm').addEventListener('submit', handleAuth);
