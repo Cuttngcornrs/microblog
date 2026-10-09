@@ -733,3 +733,14 @@ body::before { display: none; }
 .like-button.liked .like-icon { color: #b64e49; }
 .like-button:disabled { cursor: wait; opacity: .58; }
 .like-count { font-variant-numeric: tabular-nums; }
+
+/* https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQTymIRuzuf_7n8Ir5VUzIu_5GSPLWcWpgEYS2vvMJQbA&s */
+/* profile picture */
+.avatar {
+  background: url("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQTymIRuzuf_7n8Ir5VUzIu_5GSPLWcWpgEYS2vvMJQbA&s")
+    center / cover no-repeat !important;
+  border-radius: 50% !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  overflow: hidden;
+}
