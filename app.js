@@ -420,53 +420,41 @@ async function toggleLike(postId) {
   await loadPosts();
 }
 
-function setAuthMode(mode) {
-  state.authMode = mode;
-  $('loginTab').classList.toggle('active', mode === 'login');
-  $('signupTab').classList.toggle('active', mode === 'signup');
-  $('authTitle').textContent = mode === 'login' ? 'Owner sign-in.' : 'Create an account.';
-  $('authSubmit').textContent = mode === 'login' ? 'Sign in as owner' : 'Create account';
-  $('displayNameField').hidden = mode === 'login';
+function setAuthMode() {
+  state.authMode = 'login';
+  $('authTitle').textContent = 'Owner sign-in.';
+  $('authSubmit').textContent = 'Sign in as owner';
   $('authMessage').textContent = '';
-  $('authPassword').autocomplete = mode === 'login' ? 'current-password' : 'new-password';
+  $('authPassword').autocomplete = 'current-password';
 }
 
 async function handleAuth(event) {
   event.preventDefault();
   if (!requireClient()) return;
+
   const email = $('authEmail').value.trim();
   const password = $('authPassword').value;
-  const displayName = $('displayName').value.trim();
   const submit = $('authSubmit');
+
   submit.disabled = true;
   $('authMessage').textContent = '';
 
-  let result;
-  if (state.authMode === 'login') {
-    result = await supabase.auth.signInWithPassword({ email, password });
-  } else {
-    result = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { display_name: displayName || email.split('@')[0] } }
-    });
-  }
+  const result = await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
 
   submit.disabled = false;
+
   if (result.error) {
     $('authMessage').textContent = result.error.message;
-    return;
-  }
-
-  if (state.authMode === 'signup' && !result.data.session) {
-    $('authMessage').textContent = 'Check your email to confirm your account, then come back and sign in.';
     return;
   }
 
   $('authForm').reset();
   await loadIdentity();
   closeModal('authModal');
-  toast(state.authMode === 'login' ? 'Signed in.' : 'Account created.');
+  toast('Signed in.');
 }
 
 function wireEvents() {
@@ -482,8 +470,6 @@ function wireEvents() {
   $('refreshFeed').addEventListener('click', loadPosts);
   $('publishPost').addEventListener('click', publishPost);
   $('postBody').addEventListener('input', updateCharCount);
-  $('loginTab').addEventListener('click', () => setAuthMode('login'));
-  $('signupTab').addEventListener('click', () => setAuthMode('signup'));
   $('authForm').addEventListener('submit', handleAuth);
 
   document.addEventListener('click', (event) => {
