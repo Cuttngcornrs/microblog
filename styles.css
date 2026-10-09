@@ -498,12 +498,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 }
 .brand-period { color: #b95f4b; }
 .nav-item.active, .nav-item:hover {
-  background: #e4ece2;
+  background: #fffdf8;
   color: #354b3b;
 }
 .nav-item.active > span { color: #b95f4b; }
 .sidebar-card {
-  background: #f5f2d3;
+  background: #fffdf8;
   border-color: #d9e2d4;
   box-shadow: inset 3px 0 0 #7e9a7d;
 }
@@ -623,5 +623,5 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 }
 @media (max-width: 920px) {
   .mobile-header { border-bottom-color: #e1d4c1; }
-  .icon-button { border-color: #d3e0cf; background: #e8f0e5; color: #5d806b; }
+  .icon-button { border-color: #d3e0cf; background: #fffdf8; color: #5d806b; }
 }
