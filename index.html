@@ -3,25 +3,30 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A tiny personal microblog.">
-  <meta name="theme-color" content="#0d0f12">
-  <title>microblog</title>
+  <meta name="description" content="A personal notebook for olympiad geometry, half-formed ideas, and everything in between.">
+  <meta name="theme-color" content="#f6f2e9">
+  <title>in the margins</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="shell">
     <aside class="sidebar">
-      <a class="brand" href="#top" aria-label="Home">
-        <span class="brand-mark">✳</span>
-        <span>microblog</span>
+      <a class="brand" href="#top" aria-label="In the margins — home">
+        <span class="brand-mark" aria-hidden="true">△</span>
+        <span>in the margins<span class="brand-period">.</span></span>
       </a>
-      <nav class="nav">
-        <a href="#top" class="nav-item active"><span>⌂</span> Home</a>
-        <button id="openComposer" class="nav-item nav-button owner-only" hidden><span>＋</span> Write</button>
+      <nav class="nav" aria-label="Main navigation">
+        <a href="#top" class="nav-item active"><span aria-hidden="true">⌂</span> The notebook</a>
+        <button id="openComposer" class="nav-item nav-button owner-only" hidden><span aria-hidden="true">＋</span> New note</button>
       </nav>
       <div class="sidebar-card">
-        <p class="eyebrow">SPACE</p>
-        <p class="sidebar-copy">A small place for small thoughts.</p>
+        <p class="eyebrow">A SMALL REMINDER</p>
+        <p class="sidebar-copy">Draw a figure. Mark what you know. See what happens.</p>
+        <div class="sidebar-rule" aria-hidden="true"><span></span><span></span><span></span></div>
+        <p class="sidebar-note">Mostly geometry. Not exclusively.</p>
       </div>
       <div class="sidebar-bottom">
         <button id="openAuth" class="account-pill">Sign in</button>
@@ -31,27 +36,46 @@
 
     <main class="main" id="top">
       <header class="mobile-header">
-        <a class="brand" href="#top"><span class="brand-mark">✳</span><span>microblog</span></a>
-        <button id="mobileCompose" class="icon-button owner-only" hidden aria-label="Write">＋</button>
+        <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true">△</span><span>in the margins<span class="brand-period">.</span></span></a>
+        <button id="mobileCompose" class="icon-button owner-only" hidden aria-label="Write a new note">＋</button>
       </header>
 
       <section class="hero">
-        <div>
-          <p class="eyebrow">PERSONAL MICROBLOG</p>
-          <h1>Welcome,<br><em>To my Microblog</em></h1>
-          <p class="hero-copy">Here are the random yants of my brain, feel free to look around.</p>
+        <div class="hero-intro">
+          <p class="eyebrow hero-kicker"><span class="kicker-dot" aria-hidden="true"></span> A NOTEBOOK, MORE OR LESS</p>
+          <h1>between proofs,<br><em>other thoughts.</em></h1>
+          <p class="hero-copy">Olympiad geometry, ideas half-way to becoming proofs, and the occasional thought that has nothing to do with a triangle.</p>
+          <p class="hero-footnote"><span>✳</span> Written in the margins between problem sets.</p>
         </div>
-        <button id="heroCompose" class="primary-button owner-only" hidden>Write something <span>↗</span></button>
+        <div class="hero-figure" aria-hidden="true">
+          <svg viewBox="0 0 190 178" role="img">
+            <circle class="diagram-circle" cx="94" cy="83" r="65" />
+            <path class="diagram-main" d="M91 19 L34 124 L155 119 Z" />
+            <path class="diagram-soft" d="M91 19 L97 82 L34 124 M97 82 L155 119" />
+            <path class="diagram-arc" d="M82 38 A20 20 0 0 1 104 39" />
+            <circle class="diagram-point" cx="91" cy="19" r="2.8" />
+            <circle class="diagram-point" cx="34" cy="124" r="2.8" />
+            <circle class="diagram-point" cx="155" cy="119" r="2.8" />
+            <circle class="diagram-centre" cx="97" cy="82" r="3" />
+            <text x="82" y="13">A</text>
+            <text x="20" y="137">B</text>
+            <text x="160" y="130">C</text>
+            <text x="104" y="78">O</text>
+          </svg>
+          <span class="figure-caption">not to scale, naturally</span>
+        </div>
+        <button id="heroCompose" class="primary-button owner-only" hidden>Write a note <span>↗</span></button>
       </section>
 
       <div class="feed-header">
-        <span>Latest</span>
-        <button id="refreshFeed" class="text-button" title="Refresh">Refresh ↻</button>
+        <div class="feed-heading"><span class="feed-mark" aria-hidden="true">✳</span><span>Recent notes</span></div>
+        <button id="refreshFeed" class="text-button" title="Refresh the feed">Refresh <span aria-hidden="true">↻</span></button>
       </div>
 
       <section id="feed" class="feed" aria-live="polite">
-        <div class="loading-card"><div class="spinner"></div><span>Loading the feed…</span></div>
+        <div class="loading-card"><div class="spinner"></div><span>Opening the notebook…</span></div>
       </section>
+      <footer class="page-footer"><span>Keep a pencil handy.</span><span class="footer-glyph" aria-hidden="true">∠</span></footer>
     </main>
   </div>
 
@@ -59,13 +83,13 @@
     <div class="modal-backdrop" data-close="composer"></div>
     <section class="modal-card composer-card" role="dialog" aria-modal="true" aria-labelledby="composerTitle">
       <div class="modal-head">
-        <div><p class="eyebrow">NEW POST</p><h2 id="composerTitle">What’s on your mind?</h2></div>
+        <div><p class="eyebrow">A FRESH PAGE</p><h2 id="composerTitle">What’s on your mind?</h2></div>
         <button class="close-button" data-close="composer" aria-label="Close">×</button>
       </div>
-      <textarea id="postBody" maxlength="500" placeholder="Write something small…" autofocus></textarea>
+      <textarea id="postBody" maxlength="500" placeholder="A nice lemma, an unfinished idea, a small thing worth keeping…" autofocus></textarea>
       <div class="composer-footer">
         <span id="charCount">0 / 500</span>
-        <button id="publishPost" class="primary-button">Publish <span>↗</span></button>
+        <button id="publishPost" class="primary-button">Publish note <span>↗</span></button>
       </div>
       <p id="composerError" class="form-error"></p>
     </section>
@@ -75,7 +99,7 @@
     <div class="modal-backdrop" data-close="auth"></div>
     <section class="modal-card auth-card" role="dialog" aria-modal="true" aria-labelledby="authTitle">
       <div class="modal-head">
-        <div><p class="eyebrow">ACCOUNT</p><h2 id="authTitle">Sign in to join the conversation.</h2></div>
+        <div><p class="eyebrow">COME ON IN</p><h2 id="authTitle">Sign in to join the conversation.</h2></div>
         <button class="close-button" data-close="auth" aria-label="Close">×</button>
       </div>
       <div class="auth-tabs">
@@ -85,10 +109,11 @@
       <form id="authForm">
         <label>Email<input id="authEmail" type="email" autocomplete="email" required></label>
         <label>Password<input id="authPassword" type="password" autocomplete="current-password" minlength="8" required></label>
-        <label id="displayNameField" hidden>Display name<input id="displayName" type="text" maxlength="32" autocomplete="nickname"></label>
+        <label id="displayNameField" hidden>What should we call you?<input id="displayName" type="text" maxlength="32" autocomplete="nickname"></label>
         <button id="authSubmit" class="primary-button wide" type="submit">Sign in</button>
       </form>
       <p id="authMessage" class="form-message"></p>
+      <p class="auth-smallprint">No grand theories required. Just an account.</p>
     </section>
   </div>
 
