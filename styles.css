@@ -503,7 +503,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 }
 .nav-item.active > span { color: #b95f4b; }
 .sidebar-card {
-  background: #eaf0e5;
+  background: #f5f2d3;
   border-color: #d9e2d4;
   box-shadow: inset 3px 0 0 #7e9a7d;
 }
