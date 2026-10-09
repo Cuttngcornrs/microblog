@@ -14,7 +14,8 @@ const state = {
   profile: null,
   isOwner: false,
   authMode: 'login',
-  expandedComments: new Set(),
+  pendingLikes: new Set(),
+  likesReady: false,
   posts: []
 };
 
@@ -188,33 +189,6 @@ function renderAuthUI() {
   $('openAuth').textContent = signedIn ? state.profile?.display_name || state.user.email : 'Sign in';
 }
 
-function renderComments(post) {
-  const expanded = state.expandedComments.has(post.id);
-  if (!expanded) return '';
-
-  const comments = post.comments || [];
-  const list = comments.length
-    ? comments.map(comment => `
-        <div class="comment">
-          <div class="comment-main">
-            <div class="comment-author">${escapeHtml(comment.profile?.display_name || 'user')}</div>
-            <div class="comment-body">${escapeHtml(comment.body)}</div>
-          </div>
-          ${(state.isOwner || state.user?.id === comment.user_id)
-            ? `<button class="comment-delete" data-delete-comment="${comment.id}" aria-label="Delete comment">×</button>` : ''}
-        </div>`).join('')
-    : '<div class="comment"><div class="comment-body">No comments yet.</div></div>';
-
-  const form = state.user
-    ? `<form class="comment-form" data-comment-post="${post.id}">
-         <input name="body" maxlength="280" placeholder="Write a reply…" required>
-         <button class="action-button" type="submit">Post</button>
-       </form>`
-    : '<button class="action-button" data-login-comment>Sign in to comment</button>';
-
-  return `<div class="comments">${list}${form}</div>`;
-}
-
 function renderFeed() {
   if (window.MathJax?.typesetClear) window.MathJax.typesetClear([feed]);
   if (!state.posts.length) {
@@ -225,7 +199,9 @@ function renderFeed() {
   feed.innerHTML = state.posts.map(post => {
     const profile = post.profile || {};
     const canDelete = state.isOwner || state.user?.id === post.author_id;
-    const commentsCount = (post.comments || []).length;
+    const liked = Boolean(post.likedByMe);
+    const likeCount = Number(post.likeCount || 0);
+    const likePending = state.pendingLikes.has(post.id);
     return `
       <article class="post-card">
         <div class="post-top">
@@ -243,38 +219,29 @@ function renderFeed() {
         </div>
         <div class="post-body">${renderMarkdown(post.body)}</div>
         <div class="post-actions">
-          <button class="action-button" data-toggle-comments="${post.id}">${expandedLabel(state.expandedComments.has(post.id), commentsCount)}</button>
+          <button class="action-button like-button ${liked ? 'liked' : ''}" data-like-post="${post.id}" aria-pressed="${liked}" aria-label="${liked ? 'Unlike' : 'Like'} this note" title="${state.likesReady ? (state.user ? (liked ? 'Remove your like' : 'Like this note') : 'Sign in to like this note') : 'Likes need to be set up in Supabase'}" ${likePending || !state.likesReady ? 'disabled' : ''}>
+            <span class="like-icon" aria-hidden="true">${liked ? '♥' : '♡'}</span>
+            <span class="like-label">${liked ? 'Liked' : 'Like'}</span>
+            <span class="like-count">${likeCount}</span>
+          </button>
         </div>
-        ${renderComments(post)}
       </article>`;
   }).join('');
   enhancePostContent();
-}
-
-function expandedLabel(expanded, count) {
-  if (expanded) return `Hide comments ${count ? `(${count})` : ''}`;
-  return `Comments ${count ? `(${count})` : ''}`;
 }
 
 async function loadPosts() {
   if (!requireClient()) return;
   feed.innerHTML = '<div class="loading-card"><div class="spinner"></div><span>Loading the feed…</span></div>';
 
-  const { data, error } = await supabase
+  const { data: postsData, error } = await supabase
     .from('posts')
     .select(`
       id,
       author_id,
       body,
       created_at,
-      profile:profiles!posts_author_id_fkey(display_name,username),
-      comments(
-        id,
-        user_id,
-        body,
-        created_at,
-        profile:profiles!comments_user_id_fkey(display_name,username)
-      )
+      profile:profiles!posts_author_id_fkey(display_name,username)
     `)
     .order('created_at', { ascending: false });
 
@@ -283,7 +250,42 @@ async function loadPosts() {
     return;
   }
 
-  state.posts = data || [];
+  const rows = postsData || [];
+  if (!rows.length) {
+    state.posts = [];
+    state.likesReady = true;
+    renderFeed();
+    return;
+  }
+
+  const { data: likeRows, error: likesError } = await supabase
+    .from('post_likes')
+    .select('post_id,user_id')
+    .in('post_id', rows.map(post => post.id));
+
+  if (likesError) {
+    // Keep the public feed readable if the one-time likes table setup has not been run.
+    state.likesReady = false;
+    state.posts = rows.map(post => ({ ...post, likeCount: 0, likedByMe: false }));
+    renderFeed();
+    toast('Likes need a one-time setup in Supabase. See the SQL instructions.');
+    console.warn('Could not load post likes:', likesError.message);
+    return;
+  }
+
+  const likeCounts = new Map();
+  const likedPostIds = new Set();
+  for (const like of (likeRows || [])) {
+    likeCounts.set(like.post_id, (likeCounts.get(like.post_id) || 0) + 1);
+    if (state.user && like.user_id === state.user.id) likedPostIds.add(like.post_id);
+  }
+
+  state.likesReady = true;
+  state.posts = rows.map(post => ({
+    ...post,
+    likeCount: likeCounts.get(post.id) || 0,
+    likedByMe: likedPostIds.has(post.id)
+  }));
   renderFeed();
 }
 
@@ -304,8 +306,7 @@ async function loadIdentity() {
   }
   renderAuthUI();
   if (state.user) closeModal('authModal');
-  else state.expandedComments.clear();
-  renderFeed();
+  await loadPosts();
 }
 
 async function publishPost() {
@@ -338,24 +339,37 @@ async function deletePost(id) {
   if (!confirm('Delete this post?')) return;
   const { error } = await supabase.from('posts').delete().eq('id', id);
   if (error) return toast(error.message);
-  state.expandedComments.delete(id);
   toast('Post deleted.');
   await loadPosts();
 }
 
-async function submitComment(postId, body) {
-  if (!state.user) return openModal('authModal');
-  const { error } = await supabase.from('comments').insert({ post_id: postId, user_id: state.user.id, body });
-  if (error) return toast(error.message);
-  toast('Reply posted.');
-  await loadPosts();
-}
-
-async function deleteComment(id) {
+async function toggleLike(postId) {
   if (!requireClient()) return;
-  const { error } = await supabase.from('comments').delete().eq('id', id);
-  if (error) return toast(error.message);
-  toast('Comment removed.');
+  if (!state.user) {
+    toast('Sign in to like notes.');
+    openModal('authModal');
+    return;
+  }
+  if (!state.likesReady || state.pendingLikes.has(postId)) return;
+
+  const post = state.posts.find(item => item.id === postId);
+  if (!post) return;
+
+  const removingLike = post.likedByMe;
+  state.pendingLikes.add(postId);
+  renderFeed();
+
+  const result = removingLike
+    ? await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', state.user.id)
+    : await supabase.from('post_likes').insert({ post_id: postId, user_id: state.user.id });
+
+  state.pendingLikes.delete(postId);
+  if (result.error) {
+    toast(result.error.message);
+    await loadPosts();
+    return;
+  }
+
   await loadPosts();
 }
 
@@ -432,30 +446,8 @@ function wireEvents() {
     const deletePostButton = event.target.closest('[data-delete-post]');
     if (deletePostButton) deletePost(deletePostButton.dataset.deletePost);
 
-    const deleteCommentButton = event.target.closest('[data-delete-comment]');
-    if (deleteCommentButton) deleteComment(deleteCommentButton.dataset.deleteComment);
-
-    const toggle = event.target.closest('[data-toggle-comments]');
-    if (toggle) {
-      const id = toggle.dataset.toggleComments;
-      if (state.expandedComments.has(id)) state.expandedComments.delete(id);
-      else state.expandedComments.add(id);
-      renderFeed();
-    }
-
-    const loginComment = event.target.closest('[data-login-comment]');
-    if (loginComment) openModal('authModal');
-  });
-
-  document.addEventListener('submit', (event) => {
-    const form = event.target.closest('[data-comment-post]');
-    if (!form) return;
-    event.preventDefault();
-    const input = form.elements.body;
-    const body = input.value.trim();
-    if (!body) return;
-    submitComment(form.dataset.commentPost, body);
-    input.value = '';
+    const likeButton = event.target.closest('[data-like-post]');
+    if (likeButton) toggleLike(likeButton.dataset.likePost);
   });
 }
 
@@ -469,7 +461,6 @@ async function start() {
   }
   supabase.auth.onAuthStateChange(() => loadIdentity());
   await loadIdentity();
-  await loadPosts();
 }
 
 start();
