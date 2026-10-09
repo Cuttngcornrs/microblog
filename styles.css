@@ -747,3 +747,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 /* Keep the page itself solid and warm; the cards provide the contrast. */
 body { background: #f2eee4; }
 body::before { display: none; }
+
+/*https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS-oNGzAYNhQmekitGsP9SDPPcm3i7pjjTffj8FH1eqez170UuqNcfMNUk&s=10*/
+/* profile picture */
+.avatar {
+  background-image: url("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS-oNGzAYNhQmekitGsP9SDPPcm3i7pjjTffj8FH1eqez170UuqNcfMNUk&s=10");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: 50%;
+  color: transparent;
+  font-size: 0;
+}
