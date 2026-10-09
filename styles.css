@@ -498,12 +498,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 }
 .brand-period { color: #b95f4b; }
 .nav-item.active, .nav-item:hover {
-  background: #fffdf8;
+  background: #e4ece2;
   color: #354b3b;
 }
 .nav-item.active > span { color: #b95f4b; }
 .sidebar-card {
-  background: #fffdf8;
+  background: #eaf0e5;
   border-color: #d9e2d4;
   box-shadow: inset 3px 0 0 #7e9a7d;
 }
@@ -623,5 +623,127 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 }
 @media (max-width: 920px) {
   .mobile-header { border-bottom-color: #e1d4c1; }
-  .icon-button { border-color: #d3e0cf; background: #fffdf8; color: #5d806b; }
+  .icon-button { border-color: #d3e0cf; background: #e8f0e5; color: #5d806b; }
 }
+
+
+/* Long-form posts: Markdown, links, lists, code, and display mathematics. */
+.post-card .post-body {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.8;
+}
+.post-body > :first-child { margin-top: 0; }
+.post-body > :last-child { margin-bottom: 0; }
+.post-body p { margin: 0 0 .9em; }
+.post-body h1,
+.post-body h2,
+.post-body h3,
+.post-body h4 {
+  margin: 1.15em 0 .45em;
+  color: #38483c;
+  font-family: 'DM Serif Display', Georgia, serif;
+  line-height: 1.3;
+}
+.post-body h1 { font-size: 1.55em; }
+.post-body h2 { font-size: 1.35em; }
+.post-body h3 { font-size: 1.15em; }
+.post-body a {
+  color: #985744;
+  text-decoration: underline;
+  text-decoration-color: #d8b5a6;
+  text-underline-offset: 3px;
+}
+.post-body a:hover { color: #6a7f68; text-decoration-color: currentColor; }
+.post-body ul,
+.post-body ol {
+  margin: .55em 0 1em;
+  padding-left: 1.65em;
+}
+.post-body li { margin: .28em 0; padding-left: .15em; }
+.post-body li::marker { color: #a86651; }
+.post-body blockquote {
+  margin: 1em 0;
+  padding: .15em 0 .15em 1em;
+  border-left: 3px solid #9eb39d;
+  color: #69766a;
+}
+.post-body blockquote > :last-child { margin-bottom: 0; }
+.post-body :not(pre) > code {
+  padding: .12em .38em;
+  border: 1px solid #e7dece;
+  border-radius: 5px;
+  background: #f3eee4;
+  color: #835344;
+  font-size: .9em;
+  overflow-wrap: anywhere;
+}
+.post-body pre {
+  max-width: 100%;
+  margin: 1em 0;
+  padding: 14px 16px;
+  overflow: auto;
+  border: 1px solid #e6dccb;
+  border-radius: 10px;
+  background: #f8f5ed;
+  box-shadow: inset 3px 0 0 #9eb39d;
+  text-align: left;
+  tab-size: 4;
+}
+.post-body pre code,
+.post-body pre code.hljs {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #3e443f;
+  font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre;
+  overflow-wrap: normal;
+}
+.post-body table {
+  width: 100%;
+  margin: 1em 0;
+  border-collapse: collapse;
+  font-size: .95em;
+}
+.post-body th,
+.post-body td {
+  padding: 8px 10px;
+  border: 1px solid #e5dccd;
+  text-align: left;
+}
+.post-body th { background: #f0ece2; color: #465749; }
+.post-body hr { border: 0; border-top: 1px solid #e4dccb; margin: 1.3em 0; }
+.mjx-container { max-width: 100%; }
+.mjx-container[display="true"] {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: .35em 0;
+}
+@media (max-width: 600px) {
+  .post-body pre { padding: 11px 12px; }
+  .post-body pre code,
+  .post-body pre code.hljs { font-size: 11px; }
+}
+
+.composer-help {
+  margin: 10px 1px 0;
+  color: #81796d;
+  font-size: 11px;
+  line-height: 1.65;
+}
+.composer-help code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: #f1e9dc;
+  color: #825342;
+  white-space: nowrap;
+}
+
+/* Keep the page itself solid and warm; the cards provide the contrast. */
+body { background: #f2eee4; }
+body::before { display: none; }
