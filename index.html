@@ -9,7 +9,21 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.11.2/styles/github.min.css">
   <link rel="stylesheet" href="styles.css">
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\\(', '\\)'], ['$', '$']],
+        displayMath: [['\\[', '\\]'], ['$$', '$$']],
+        processEscapes: true
+      },
+      options: {
+        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      },
+      startup: { typeset: false }
+    };
+  </script>
 </head>
 <body>
   <div class="shell">
@@ -84,9 +98,10 @@
         <div><p class="eyebrow">A FRESH PAGE</p><h2 id="composerTitle">What’s on your mind?</h2></div>
         <button class="close-button" data-close="composer" aria-label="Close">×</button>
       </div>
-      <textarea id="postBody" maxlength="500" placeholder="What new is cooking lol?" autofocus></textarea>
+      <textarea id="postBody" maxlength="20000" placeholder="What new is cooking lol?" autofocus></textarea>
+      <p class="composer-help">Markdown is supported: <code>**bold**</code>, <code>- list items</code>, <code>[links](https://...)</code>, <code>$a_i^2$</code> or <code>\[...\]</code> for math, and <code>```cpp</code> for a code block.</p>
       <div class="composer-footer">
-        <span id="charCount">0 / 500</span>
+        <span id="charCount">0 / 20,000</span>
         <button id="publishPost" class="primary-button">Publish note <span>↗</span></button>
       </div>
       <p id="composerError" class="form-error"></p>
@@ -119,6 +134,9 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@18.0.14/lib/marked.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.16/dist/purify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.11.2/lib/common.min.js"></script>
   <script src="app.js" type="module"></script>
 </body>
 </html>
