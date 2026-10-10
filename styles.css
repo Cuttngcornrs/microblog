@@ -1016,3 +1016,35 @@ body { min-height: 0; }
   .archive-note-title { font-size: 14px; }
   .logs-page-intro h1 { font-size: 41px; }
 }
+/* Hide scrollbars without disabling scrolling */
+.right-panel,
+.main,
+.notebook-log-list {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.right-panel::-webkit-scrollbar,
+.main::-webkit-scrollbar,
+.notebook-log-list::-webkit-scrollbar {
+  display: none !important;
+}
+
+/* Let the right panel handle all main-page scrolling */
+@media (min-width: 921px) {
+  .main {
+    height: auto !important;
+    overflow: visible !important;
+    scrollbar-gutter: auto !important;
+    padding-right: 0 !important;
+  }
+}
+/* profile picture */
+.avatar {
+  background: url("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS-oNGzAYNhQmekitGsP9SDPPcm3i7pjjTffj8FH1eqez170UuqNcfMNUk&s=10")
+    center / cover no-repeat !important;
+  border-radius: 50% !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  overflow: hidden;
+}
