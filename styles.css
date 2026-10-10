@@ -887,8 +887,11 @@ body { min-height: 0; }
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable;
+  scrollbar-width: none;
   scroll-behavior: smooth;
+}
+.right-panel::-webkit-scrollbar {
+  display: none;
 }
 .main { min-height: 100%; }
 .nav-item[aria-current="page"] { background: #fffdf8; color: #354b3b; }
