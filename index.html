@@ -33,9 +33,11 @@
         <span>In the margins<span class="brand-period">.</span></span>
       </a>
       <nav class="nav" aria-label="Main navigation">
-        <a href="#top" class="nav-item active"><span aria-hidden="true">⌂</span> The notebook</a>
+        <a href="#top" id="notebookNav" class="nav-item active"><span aria-hidden="true">⌂</span> This notebook</a>
+        <a href="#logs" id="logsNav" class="nav-item"><span aria-hidden="true">☷</span> Logs</a>
         <button id="openComposer" class="nav-item nav-button owner-only" hidden><span aria-hidden="true">＋</span> New note</button>
       </nav>
+
       <div class="sidebar-card">
         <p class="eyebrow">HELLO</p>
         <p class="sidebar-copy">This is a small microblog site I made mostly for personal uses, but feel free to read into my mind!</p>
@@ -48,10 +50,14 @@
       </div>
     </aside>
 
+    <div class="right-panel" id="rightPanel">
     <main class="main" id="top">
       <header class="mobile-header">
         <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true">△</span><span>In the margins<span class="brand-period">.</span></span></a>
-        <button id="mobileCompose" class="icon-button owner-only" hidden aria-label="Write a new note">＋</button>
+        <div class="mobile-header-actions">
+          <a class="text-button mobile-logs-link" href="#logs">Logs ↗</a>
+          <button id="mobileCompose" class="icon-button owner-only" hidden aria-label="Write a new note">＋</button>
+        </div>
       </header>
 
       <section class="hero">
@@ -89,6 +95,26 @@
       </section>
       <footer class="page-footer"><span>A paper and a pencil</span><span class="footer-glyph" aria-hidden="true">∠</span></footer>
     </main>
+
+    <section id="logsPage" class="logs-page" hidden aria-labelledby="logsTitle">
+      <header class="logs-mobile-header">
+        <a class="brand" href="#top" aria-label="Back to the notebook">
+          <span class="brand-mark" aria-hidden="true">△</span>
+          <span>In the margins<span class="brand-period">.</span></span>
+        </a>
+        <a class="text-button" href="#top">← The notebook</a>
+      </header>
+      <div class="logs-page-intro">
+        <p class="eyebrow">THE ARCHIVE</p>
+        <h1 id="logsTitle">Logs</h1>
+        <p>Every note, gathered by month. Choose a date to return to that page.</p>
+      </div>
+      <div id="notebookLog" class="archive-list" aria-label="Notes grouped by month">
+        <p class="archive-empty">Your notes will gather here by month.</p>
+      </div>
+      <footer class="page-footer"><span>A paper and a pencil</span><span class="footer-glyph" aria-hidden="true">∠</span></footer>
+    </section>
+    </div>
   </div>
 
   <div id="composerModal" class="modal" hidden>
@@ -115,14 +141,18 @@
         <div><p class="eyebrow">COME ON IN</p><h2 id="authTitle">Sign in to join the conversation.</h2></div>
         <button class="close-button" data-close="auth" aria-label="Close">×</button>
       </div>
-    
+      <div class="auth-tabs">
+        <button id="loginTab" class="auth-tab active">Sign in</button>
+        <button id="signupTab" class="auth-tab">Create account</button>
+      </div>
       <form id="authForm">
         <label>Email<input id="authEmail" type="email" autocomplete="email" required></label>
         <label>Password<input id="authPassword" type="password" autocomplete="current-password" minlength="8" required></label>
+        <label id="displayNameField" hidden>What should we call you?<input id="displayName" type="text" maxlength="32" autocomplete="nickname"></label>
         <button id="authSubmit" class="primary-button wide" type="submit">Sign in</button>
       </form>
       <p id="authMessage" class="form-message"></p>
-      <p class="auth-smallprint">Accounts go brrr</p>
+      <p class="auth-smallprint">No grand theories required. Just an account.</p>
     </section>
   </div>
 

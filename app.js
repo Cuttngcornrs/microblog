@@ -173,16 +173,117 @@ function initial(name = '?') {
   return escapeHtml((name.trim()[0] || '?').toUpperCase());
 }
 
-function timeAgo(dateString) {
-  const seconds = Math.max(1, Math.floor((Date.now() - new Date(dateString).getTime()) / 1000));
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d`;
-  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(dateString));
+function formatPostDate(dateString) {
+  const date = new Date(dateString);
+  if (!Number.isFinite(date.getTime())) return 'Unknown date';
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short', day: 'numeric', year: 'numeric'
+  }).format(date);
+}
+
+function formatMonthLabel(dateString) {
+  const date = new Date(dateString);
+  if (!Number.isFinite(date.getTime())) return 'Unknown month';
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'long', year: 'numeric'
+  }).format(date);
+}
+
+function formatDayNumber(dateString) {
+  const date = new Date(dateString);
+  if (!Number.isFinite(date.getTime())) return '?';
+  return new Intl.DateTimeFormat(undefined, { day: 'numeric' }).format(date);
+}
+
+function archiveTitle(body = '') {
+  const firstLine = String(body).split(/\r?\n/).find(line => line.trim()) || '';
+  const cleaned = firstLine
+    .replace(/^\s{0,3}#{1,6}\s*/, '')
+    .replace(/^\s*[-*+]\s+/, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/[*_~`]/g, '')
+    .replace(/\$([^$]+)\$/g, '$1')
+    .replace(/\\\((.*?)\\\)/g, '$1')
+    .replace(/\\\[(.*?)\\\]/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return cleaned ? `${cleaned.slice(0, 100)}${cleaned.length > 100 ? '…' : ''}` : 'A note without a title';
+}
+
+function renderNotebookLog() {
+  const log = $('notebookLog');
+  if (!log) return;
+
+  if (!state.posts.length) {
+    log.innerHTML = '<p class="archive-empty">Your notes will gather here by month.</p>';
+    return;
+  }
+
+  const groups = new Map();
+  for (const post of state.posts) {
+    const date = new Date(post.created_at);
+    const key = Number.isFinite(date.getTime())
+      ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      : 'unknown';
+    if (!groups.has(key)) groups.set(key, { label: formatMonthLabel(post.created_at), posts: [] });
+    groups.get(key).posts.push(post);
+  }
+
+  log.innerHTML = Array.from(groups.values()).map(group => `
+    <section class="archive-month">
+      <h2 class="archive-month-title">${escapeHtml(group.label)}</h2>
+      <ul class="archive-month-list">
+        ${group.posts.map(post => `
+          <li>
+            <a class="archive-note-link" href="#note-${encodeURIComponent(post.id)}" data-note-link="${escapeHtml(post.id)}" aria-label="Open note from ${escapeHtml(formatPostDate(post.created_at))}: ${escapeHtml(archiveTitle(post.body))}">
+              <time class="archive-note-date" datetime="${escapeHtml(post.created_at)}">${escapeHtml(formatPostDate(post.created_at))}</time>
+              <span class="archive-note-title">${escapeHtml(archiveTitle(post.body))}</span>
+              <span class="archive-note-arrow" aria-hidden="true">↗</span>
+            </a>
+          </li>`).join('')}
+      </ul>
+    </section>`).join('');
+}
+
+function showPage(page, { scrollTop = true } = {}) {
+  const showLogs = page === 'logs';
+  $('top').hidden = showLogs;
+  $('logsPage').hidden = !showLogs;
+  $('notebookNav').classList.toggle('active', !showLogs);
+  $('logsNav').classList.toggle('active', showLogs);
+  document.querySelectorAll('.mobile-logs-link').forEach(link => {
+    link.setAttribute('aria-current', showLogs ? 'page' : 'false');
+  });
+  if (scrollTop) $('rightPanel').scrollTo({ top: 0, behavior: 'auto' });
+}
+
+function scrollToNote(postId, updateUrl = false) {
+  const panel = $('rightPanel');
+  const note = document.getElementById(`note-${postId}`);
+  if (!panel || !note) return;
+
+  showPage('notebook', { scrollTop: false });
+  const panelRect = panel.getBoundingClientRect();
+  const noteRect = note.getBoundingClientRect();
+  const nextTop = panel.scrollTop + noteRect.top - panelRect.top - 18;
+  panel.scrollTo({ top: Math.max(0, nextTop), behavior: 'smooth' });
+
+  if (updateUrl && window.history?.replaceState) {
+    window.history.replaceState(null, '', `#note-${encodeURIComponent(postId)}`);
+  }
+}
+
+function syncPageFromHash() {
+  const hash = decodeURIComponent(window.location.hash.slice(1));
+  if (hash === 'logs') {
+    showPage('logs');
+    return;
+  }
+  showPage('notebook', { scrollTop: !hash.startsWith('note-') });
+  if (hash.startsWith('note-')) {
+    const postId = hash.slice('note-'.length);
+    requestAnimationFrame(() => scrollToNote(postId, false));
+  }
 }
 
 function toast(message) {
@@ -220,6 +321,7 @@ function renderFeed() {
   if (window.MathJax?.typesetClear) window.MathJax.typesetClear([feed]);
   if (!state.posts.length) {
     feed.innerHTML = '<div class="empty-card">Nothing here yet. The first post is waiting.</div>';
+    renderNotebookLog();
     return;
   }
 
@@ -230,7 +332,7 @@ function renderFeed() {
     const likeCount = Number(post.likeCount || 0);
     const likePending = state.pendingLikes.has(post.id);
     return `
-      <article class="post-card">
+      <article id="note-${escapeHtml(post.id)}" class="post-card" tabindex="-1">
         <div class="post-top">
           <div class="post-meta">
             <div class="avatar">${initial(profile.display_name || 'u')}</div>
@@ -238,7 +340,7 @@ function renderFeed() {
               <div class="author-line">
                 <span class="author">${escapeHtml(profile.display_name || 'user')}</span>
                 ${profile.username ? `<span class="handle">@${escapeHtml(profile.username)}</span>` : ''}
-                <span class="post-time">· ${escapeHtml(timeAgo(post.created_at))}</span>
+                <time class="post-time" datetime="${escapeHtml(post.created_at)}">· ${escapeHtml(formatPostDate(post.created_at))}</time>
               </div>
             </div>
           </div>
@@ -254,6 +356,7 @@ function renderFeed() {
         </div>
       </article>`;
   }).join('');
+  renderNotebookLog();
   enhancePostContent();
 }
 
@@ -273,7 +376,9 @@ async function loadPosts() {
     .order('created_at', { ascending: false });
 
   if (error) {
+    state.posts = [];
     feed.innerHTML = `<div class="error-card">Could not load the feed.<br><small>${escapeHtml(error.message)}</small></div>`;
+    renderNotebookLog();
     return;
   }
 
@@ -420,44 +525,57 @@ async function toggleLike(postId) {
   await loadPosts();
 }
 
-function setAuthMode() {
-  state.authMode = 'login';
-  $('authTitle').textContent = 'Owner sign-in.';
-  $('authSubmit').textContent = 'Sign in as owner';
+function setAuthMode(mode) {
+  state.authMode = mode;
+  $('loginTab').classList.toggle('active', mode === 'login');
+  $('signupTab').classList.toggle('active', mode === 'signup');
+  $('authTitle').textContent = mode === 'login' ? 'Owner sign-in.' : 'Create an account.';
+  $('authSubmit').textContent = mode === 'login' ? 'Sign in as owner' : 'Create account';
+  $('displayNameField').hidden = mode === 'login';
   $('authMessage').textContent = '';
-  $('authPassword').autocomplete = 'current-password';
+  $('authPassword').autocomplete = mode === 'login' ? 'current-password' : 'new-password';
 }
 
 async function handleAuth(event) {
   event.preventDefault();
   if (!requireClient()) return;
-
   const email = $('authEmail').value.trim();
   const password = $('authPassword').value;
+  const displayName = $('displayName').value.trim();
   const submit = $('authSubmit');
-
   submit.disabled = true;
   $('authMessage').textContent = '';
 
-  const result = await supabase.auth.signInWithPassword({
-    email,
-    password
-  });
+  let result;
+  if (state.authMode === 'login') {
+    result = await supabase.auth.signInWithPassword({ email, password });
+  } else {
+    result = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { display_name: displayName || email.split('@')[0] } }
+    });
+  }
 
   submit.disabled = false;
-
   if (result.error) {
     $('authMessage').textContent = result.error.message;
+    return;
+  }
+
+  if (state.authMode === 'signup' && !result.data.session) {
+    $('authMessage').textContent = 'Check your email to confirm your account, then come back and sign in.';
     return;
   }
 
   $('authForm').reset();
   await loadIdentity();
   closeModal('authModal');
-  toast('Signed in.');
+  toast(state.authMode === 'login' ? 'Signed in.' : 'Account created.');
 }
 
 function wireEvents() {
+  window.addEventListener('hashchange', syncPageFromHash);
   $('openComposer').addEventListener('click', () => openModal('composerModal'));
   $('mobileCompose').addEventListener('click', () => openModal('composerModal'));
   $('heroCompose').addEventListener('click', () => openModal('composerModal'));
@@ -470,9 +588,23 @@ function wireEvents() {
   $('refreshFeed').addEventListener('click', loadPosts);
   $('publishPost').addEventListener('click', publishPost);
   $('postBody').addEventListener('input', updateCharCount);
+  $('loginTab').addEventListener('click', () => setAuthMode('login'));
+  $('signupTab').addEventListener('click', () => setAuthMode('signup'));
   $('authForm').addEventListener('submit', handleAuth);
 
   document.addEventListener('click', (event) => {
+    const noteLink = event.target.closest('[data-note-link]');
+    if (noteLink) {
+      event.preventDefault();
+      const targetHash = `#note-${encodeURIComponent(noteLink.dataset.noteLink)}`;
+      if (window.location.hash === targetHash) {
+        syncPageFromHash();
+      } else {
+        window.location.hash = targetHash;
+      }
+      return;
+    }
+
     const close = event.target.closest('[data-close]');
     if (close) closeModal(close.dataset.close === 'auth' ? 'authModal' : 'composerModal');
 
@@ -494,6 +626,7 @@ async function start() {
   }
   supabase.auth.onAuthStateChange(() => loadIdentity());
   await loadIdentity();
+  syncPageFromHash();
 }
 
 start();

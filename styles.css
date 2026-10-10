@@ -734,13 +734,282 @@ body::before { display: none; }
 .like-button:disabled { cursor: wait; opacity: .58; }
 .like-count { font-variant-numeric: tabular-nums; }
 
-/* https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQTymIRuzuf_7n8Ir5VUzIu_5GSPLWcWpgEYS2vvMJQbA&s */
-/* profile picture */
-.avatar {
-  background: url("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQTymIRuzuf_7n8Ir5VUzIu_5GSPLWcWpgEYS2vvMJQbA&s")
-    center / cover no-repeat !important;
-  border-radius: 50% !important;
-  color: transparent !important;
-  font-size: 0 !important;
+/* Notebook archive + fixed desktop sidebar / independently scrolling notebook. */
+.notebook-log {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: 80px;
+  margin-top: 23px;
   overflow: hidden;
+}
+.notebook-log-heading {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 1px;
+}
+.notebook-log-title {
+  margin: 0 0 9px;
+  color: #5d806b;
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 15px;
+  font-weight: 400;
+}
+.notebook-log-count {
+  color: #a09689;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.notebook-log-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 4px 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: #d9c8b1 transparent;
+}
+.notebook-month { padding: 3px 0 9px; }
+.notebook-month + .notebook-month {
+  padding-top: 10px;
+  border-top: 1px solid #e6dccd;
+}
+.notebook-month-title {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0 0 5px;
+  padding: 3px 2px 4px;
+  background: #f2eee4;
+  color: #8a7b6d;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+}
+.notebook-month-list { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.notebook-log-link {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 29px;
+  padding: 5px 7px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: #665d53;
+  font-size: 11px;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+.notebook-log-link:hover,
+.notebook-log-link.active {
+  border-color: #e6dccd;
+  background: #fffdf8;
+  color: #4f715a;
+}
+.notebook-log-day {
+  display: grid;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 22px;
+  place-items: center;
+  border-radius: 6px;
+  background: #e8eee3;
+  color: #5d806b;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.notebook-log-date { color: #8b8175; font-size: 10px; }
+.notebook-log-empty { margin: 2px 4px; color: #a09689; font-size: 11px; line-height: 1.6; }
+.sidebar-card { flex: 0 0 auto; margin-top: 14px; }
+.sidebar-bottom { flex: 0 0 auto; margin-top: 13px; }
+.post-time { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.post-card:target { scroll-margin-top: 18px; }
+.post-card:focus { outline: none; }
+
+@media (min-width: 921px) {
+  html, body { height: 100%; overflow: hidden; }
+  .shell {
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    align-items: stretch;
+  }
+  .sidebar {
+    height: 100%;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .main {
+    height: 100%;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
+    padding-right: 14px;
+    scroll-padding-top: 18px;
+  }
+}
+
+@media (max-width: 920px) {
+  html, body { height: auto; overflow: auto; }
+  .shell { height: auto; overflow: visible; }
+  .main { height: auto; overflow: visible; padding-right: 0; }
+}
+
+/* App layout: the sidebar stays still; only the right-hand panel scrolls. */
+html, body { height: 100%; overflow: hidden; }
+body { min-height: 0; }
+.shell {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  align-items: stretch;
+}
+.sidebar {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  align-self: stretch;
+  overflow: hidden;
+}
+.right-panel {
+  grid-column: 2;
+  min-width: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scroll-behavior: smooth;
+}
+.main { min-height: 100%; }
+.nav-item[aria-current="page"] { background: #fffdf8; color: #354b3b; }
+
+/* The Logs view is a separate page in the app, not a list inside the sidebar. */
+.logs-page {
+  min-height: 100%;
+  padding: 40px 0 34px;
+}
+.logs-mobile-header { display: none; }
+.logs-page-intro {
+  padding: 37px 0 27px;
+  border-bottom: 1px solid #ddcfbb;
+}
+.logs-page-intro .eyebrow { color: #5d806b; }
+.logs-page-intro h1 {
+  margin: 0;
+  color: #303a33;
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: clamp(40px, 5vw, 60px);
+  font-weight: 400;
+  letter-spacing: -.045em;
+  line-height: 1.08;
+}
+.logs-page-intro > p:last-child {
+  max-width: 520px;
+  margin: 13px 0 0;
+  color: #72796f;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.archive-list { display: grid; gap: 28px; padding-top: 27px; }
+.archive-month-title {
+  margin: 0 0 12px;
+  color: #5d806b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.archive-month-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #e6dccd;
+  border-radius: 13px;
+  background: #fffdf8;
+  box-shadow: 0 5px 16px rgba(72, 52, 34, .035);
+}
+.archive-month-list li + li { border-top: 1px solid #eee6da; }
+.archive-note-link {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 14px;
+  padding: 15px 17px;
+  color: #403831;
+  transition: background .15s ease, color .15s ease;
+}
+.archive-note-link:hover,
+.archive-note-link:focus-visible {
+  background: #f3f5ee;
+  color: #435f4c;
+}
+.archive-note-date {
+  color: #8b8173;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.archive-note-title {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.archive-note-arrow { color: #b95f4b; text-align: right; }
+.archive-empty {
+  margin: 0;
+  padding: 22px;
+  border: 1px solid #e6dccd;
+  border-radius: 13px;
+  background: #fffdf8;
+  color: #81796d;
+  font-size: 13px;
+}
+.mobile-header-actions { display: flex; align-items: center; gap: 11px; }
+.mobile-logs-link { display: none; }
+
+@media (max-width: 920px) {
+  .shell {
+    height: 100vh;
+    height: 100dvh;
+    grid-template-columns: minmax(0, 1fr);
+    width: min(calc(100% - 32px), 760px);
+    gap: 0;
+  }
+  .sidebar { display: none; }
+  .right-panel { grid-column: 1; width: 100%; }
+  .mobile-logs-link { display: inline-flex; align-items: center; }
+  .logs-page { padding-top: 0; }
+  .logs-mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 17px 1px;
+    border-bottom: 1px solid #e1d4c1;
+  }
+  .logs-mobile-header .brand { font-size: 18px; }
+  .logs-page-intro { padding-top: 35px; }
+}
+@media (max-width: 600px) {
+  .shell { width: min(calc(100% - 24px), 500px); }
+  .archive-note-link { grid-template-columns: 78px minmax(0, 1fr) 14px; gap: 9px; padding: 13px 11px; }
+  .archive-note-date { font-size: 10px; }
+  .archive-note-title { font-size: 14px; }
+  .logs-page-intro h1 { font-size: 41px; }
 }
